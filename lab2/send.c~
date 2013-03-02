@@ -1,0 +1,64 @@
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "lib.h"
+
+#define HOST "127.0.0.1"
+#define PORT 10000
+
+int main(int argc,char** argv){
+  init(HOST,PORT);
+  msg t;
+  mine p;
+  struct stat f_status;
+  int f = open (argv[1],O_RDONLY);//deschidem fisierul
+  fstat (f, &f_status);
+  int size = f_status.st_size;
+  char w[100];
+  	if (f<0){
+  		printf("Eroare");
+  		return 0;
+  		}//daca e gol eroare + return
+  	p.type = 1;
+  	memcpy (p.data,argv[1],strlen(argv[1])+1); //copiem datele
+  		
+  	t.len = sizeof(p); //dimensiunea mesajului
+  	memcpy (t.payload,&p,t.len);
+  	send_message (&t);
+  	p.type = 2;
+  	memcpy (p.data,&size,sizeof(size)); //copiem datele
+  		
+  	t.len = sizeof(p); //dimensiunea mesajului
+  	memcpy (t.payload,&p,t.len);
+  	send_message (&t);
+	p.type = 3;
+	int i;
+	for (i = 0 ; i<2;i++){
+	//printf("f=%d\n",f);
+	int num_read = read (f,w,2);
+	//printf("f=%d\n",f);
+	memcpy (p.data,&num_read, sizeof(num_read));
+	//printf("nr=%d\n",num_read);
+	memcpy (p.data+sizeof(int),w, num_read*sizeof(char));
+	//printf("f=%d\n",f);
+	t.len = sizeof(p);
+	memcpy (t.payload, &p, t.len);
+	send_message (&t);
+	}
+  sprintf(t.payload,"Hello World of PC");
+  t.len = strlen(t.payload)+1;
+  send_message(&t);
+
+  if (recv_message(&t)<0){
+    perror("receive error");
+  }
+  else {
+    printf("[%s] Got reply with payload: %s\n",argv[0],t.payload);
+  }
+
+  return 0;
+}
